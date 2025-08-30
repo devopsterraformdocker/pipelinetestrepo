@@ -46,6 +46,7 @@ stages:
       inputs:
         notifyUsers: 'self'
 - stage: apply
+  dependsOn: Manualvalidation
   displayName: Codedeploy
   jobs:
   - job: CodeDeploy
