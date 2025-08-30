@@ -1,0 +1,66 @@
+trigger:
+  branches:
+    include:
+    - main
+pool:
+  name: assignment_agent
+stages:
+- stage: DEV
+  displayName: DEVstage
+  jobs:
+  - job: DEVStagejob
+    steps:
+    - task: TerraformInstaller@1
+      inputs:
+        terraformVersion: 'latest'
+    - task: TerraformTask@5
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        backendServiceArm: 'assignment_scn'
+        backendAzureRmResourceGroupName: 'Agrawest'
+        backendAzureRmStorageAccountName: 'aug15'
+        backendAzureRmContainerName: 'statefile'
+        backendAzureRmKey: 'new.tfstate'
+    - task: TerraformTask@5
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        environmentServiceNameAzureRM: 'assignment_scn'
+  - job: ScanningJob
+    dependsOn:
+    - DEVStagejob
+    steps:
+    - task: tfsec@1
+      inputs:
+        version: 'v1.26.0'
+        dir: '$(System.DefaultWorkingDirectory)'
+- stage: Manualvalidation
+  displayName: manualvalidation
+  jobs:
+  - job: Validation
+    pool:
+      name: server
+    steps:
+    - task: ManualValidation@1
+      inputs:
+        notifyUsers: 'self'
+- stage: apply
+  displayName: Codedeploy
+  jobs:
+  - job: CodeDeploy
+    steps:
+    - task: TerraformTask@5
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        backendServiceArm: 'assignment_scn'
+        backendAzureRmResourceGroupName: 'Agrawest'
+        backendAzureRmStorageAccountName: 'aug15'
+        backendAzureRmContainerName: 'statefile'
+        backendAzureRmKey: 'new.tfstate'
+    - task: TerraformTask@5
+      inputs:
+        provider: 'azurerm'
+        command: 'apply'
+        environmentServiceNameAzureRM: 'assignment_scn'
